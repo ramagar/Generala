@@ -10,12 +10,22 @@ class Juego:
         self.nombres_jugadores = []
 
     def set_cantidad_jugadores(self, cantidad):
+        '''Metodo que setea la cantidad de jugadores'''
         self.__cantidad_jugadores = cantidad
 
     def get_cantidad_jugadores(self):
+        '''Metodo que devuelve la cantidad de jugadores'''
         return self.__cantidad_jugadores
     
-    def set_la_apuesta(self, apuesta):
+    def validar_apuesta(self, apuesta:str) -> bool:
+        '''Metodo que valida lo ingresado en la apuesta, si la apuesta es valida de vuelve True, de lo contrario False'''
+        if apuesta.isspace() or not apuesta.isprintable or apuesta == '':
+            return False
+        else:
+            return True
+    
+    def set_la_apuesta(self, apuesta:str) -> None:
+        '''Metodo que setea la apuesta'''
         self.__la_apuesta = apuesta
         
     def get_la_apuesta(self):
@@ -57,18 +67,30 @@ class JuegoApp:
         '''Estilo para los titulos'''
         
         #Estilo de cajas de texto
-        self.estilo_caja_texto = {'font':'impact 30', 'foreground':'#FF8C00', 'background':'#205067', 'width':40}
+        self.estilo_caja_texto = {'font':'impact 30', 'foreground':'#FF8C00', 'background':'#18435F', 'width':50, 'border':5, 'insertbackground':'#FF8C00', 'justify':'center'}
 
-    def cerrar_programa(self):
+    def cerrar_programa(self) -> None:
         '''Metodo que permite cerrar el programa destruyendo el root'''
         root.destroy()
        
-    def cambiar_pantalla(self, nueva_pantalla:Type):
-        '''Metodo que permite cambiar la pantalla de la interfaz a una nueva que se quiera producir destruyendo los widgets que contiene el mainframe'''
+    def desvincular_teclas(self) -> None:  
+        '''Metodo para desvincular teclas menos la tecla de escape'''
+        for i in range (6):
+            self.root.unbind(f'<KeyPress-{i+2}>')
+            self.root.unbind(f'<KeyRelease-{i+2}>')
+        self.root.unbind(f'<KeyPress-Return>')
+        self.root.unbind(f'<KeyRelease-Return>')
+       
+    def eliminar_widgets(self) -> None:
+        '''Metodo que destruye los widgets que contiene el mainframe'''  
         for widget in self.mainframe.winfo_children():
             widget.destroy()
+            
+    def cambiar_pantalla(self, nueva_pantalla:Type) -> None:
+        '''Metodo que permite cambiar la pantalla de la interfaz'''
+        self.desvincular_teclas()
+        self.eliminar_widgets()
         nueva_pantalla(self.root, self.juego)
-    
 
             
 class PantallaInicial(JuegoApp):
@@ -157,8 +179,7 @@ class PantallaInicial(JuegoApp):
         self.boton_continuar.bind('<Enter>', lambda event: self.boton_continuar.config(background='#1C5B83', activeforeground='#D84500', activebackground='#205067'))
         self.boton_continuar.bind('<Leave>', lambda event: self.boton_continuar.config(background='#18435F'))
 
-        
-        
+
 class Pantalla2(JuegoApp):
     '''Segunda pantalla de la aplicacion grafica'''
     def __init__(self, root: Tk, juego: Juego):
@@ -172,11 +193,31 @@ class Pantalla2(JuegoApp):
         #Defino la caja de texto
         self.texto_entrada = StringVar()
         '''Entrada del texto'''
-        self.text_area = Text(self.mainframe, wrap="word", height=2, **self.estilo_caja_texto)
+        self.text_area = Entry(self.mainframe, textvariable=self.texto_entrada, **self.estilo_caja_texto)
         self.text_area.pack(pady=100)
+        self.text_area.bind('<Enter>', lambda event: self.text_area.config(background='#1C5B83'))
+        self.text_area.bind('<Leave>', lambda event: self.text_area.config(background='#18435F'))
+        self.text_area.bind('<Return>', self.obtener_texto)
+        
 
+    def obtener_texto(self, event):
+        texto_ingresado = self.texto_entrada.get()
+        self.texto_entrada.set("")
+        if juego.validar_apuesta(texto_ingresado):
+            juego.set_la_apuesta(texto_ingresado)
+            self.cambiar_pantalla(Pantalla3)
+        else:
+            if hasattr(self, 'problema'):
+                self.problema.config(text='La apuesta ingresada no es valida, escribir otra por favor')
+            else:
+                self.problema = Label(self.mainframe, text='La apuesta ingresada no es valida, escribir otra por favor', font='impact 22', foreground='#FF8C00', background='#032339')
+                self.problema.pack()
         
         
+class Pantalla3(JuegoApp):
+    '''Segunda pantalla de la aplicacion grafica'''
+    def __init__(self, root: Tk, juego: Juego):
+        super().__init__(root, juego)
                 
         
 if __name__ == "__main__":
