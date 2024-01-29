@@ -1,6 +1,9 @@
 from tkinter import *
-from tkinter import Tk
+from tkinter import ttk
 from typing import Type
+from ttkthemes import ThemedStyle
+from PIL import Image, ImageTk
+
 
 class Juego:
     '''Clase contenedora de la logica del juego'''
@@ -53,7 +56,6 @@ class JuegoApp:
 
         #Boton de cierre
         self.boton_cierre = Button(root, text='❌', font=('Arial', 8, 'bold'), foreground='red', background='#032339', pady=4, width=3, command=self.cerrar_programa)
-        '''Boton que cierra el programa'''
         self.boton_cierre.place(relx=1, rely=0, anchor='ne')
         self.boton_cierre.bind('<Enter>', lambda event: self.boton_cierre.config(background='#1C5B83', activeforeground='#D84500', activebackground='#205067'))
         self.boton_cierre.bind('<Leave>', lambda event: self.boton_cierre.config(background='#18435F'))
@@ -61,7 +63,6 @@ class JuegoApp:
 
         #Estilo de titulos
         self.estilo_titulo = {'font':'impact 55', 'foreground':'#FF8C00', 'background':'#032339'}
-        '''Estilo para los titulos'''
 
     def cerrar_programa(self) -> None:
         '''Metodo que permite cerrar el programa destruyendo el root'''
@@ -72,18 +73,18 @@ class JuegoApp:
         for i in range (10):
             self.root.unbind(f'<KeyPress-{i}>')
             self.root.unbind(f'<KeyRelease-{i}>')
-        self.root.unbind(f'<KeyPress-Return>')
-        self.root.unbind(f'<KeyRelease-Return>')
-        self.root.unbind(f'<KeyPress-f>')
-        self.root.unbind(f'<KeyRelease-f>')
-        self.root.unbind(f'<KeyPress-e>')
-        self.root.unbind(f'<KeyRelease-e>')
-        self.root.unbind(f'<KeyPress-p>')
-        self.root.unbind(f'<KeyRelease-p>')
-        self.root.unbind(f'<KeyPress-g>')
-        self.root.unbind(f'<KeyRelease-g>')
-        self.root.unbind(f'<KeyPress-d>')
-        self.root.unbind(f'<KeyRelease-d>')
+        self.root.unbind('<KeyPress-Return>')
+        self.root.unbind('<KeyRelease-Return>')
+        self.root.unbind('<KeyPress-f>')
+        self.root.unbind('<KeyRelease-f>')
+        self.root.unbind('<KeyPress-e>')
+        self.root.unbind('<KeyRelease-e>')
+        self.root.unbind('<KeyPress-p>')
+        self.root.unbind('<KeyRelease-p>')
+        self.root.unbind('<KeyPress-g>')
+        self.root.unbind('<KeyRelease-g>')
+        self.root.unbind('<KeyPress-d>')
+        self.root.unbind('<KeyRelease-d>')
         
         
        
@@ -98,30 +99,55 @@ class JuegoApp:
         self.eliminar_widgets()
         nueva_pantalla(self.root, self.juego)
 
-            
 class PantallaInicial(JuegoApp):
+    '''Pantalla inicial donde comienza la aplicacion'''
+    def __init__(self, root: Tk, juego: Juego):
+        super().__init__(root, juego)
+        #Imagen para la presentacion
+        imagen = ImageTk.PhotoImage(Image.open('logo.png'))
+        label = Label(self.mainframe, image=imagen, background='#032339')
+        label.pack()
+        self.imagen_referencia = imagen
+
+        #Estilo Barra de Progreso
+        self.estilo_barra_progreso = ttk.Style()
+        self.estilo_barra_progreso.theme_use("classic")
+        self.estilo_barra_progreso.configure("TProgressbar", troughcolor='#1C5B83', thickness=20, background='#FF8C00')
+        
+        #Defino la barra de Progreso
+        self.barra_progreso = ttk.Progressbar(self.mainframe, orient='horizontal', length=500, mode='determinate', style="Horizontal.TProgressbar")
+        self.barra_progreso.pack(pady=20)
+        
+        #Inicio la barra de progreso
+        self.iniciar_progreso()
+
+    def iniciar_progreso(self):
+        '''Metodo que activa la barra de progreso al iniciar el programa'''
+        valor_actual = self.barra_progreso['value']
+        if valor_actual < 100:
+            self.barra_progreso['value'] += 3
+            self.root.after(100, self.iniciar_progreso)
+        else:
+            self.cambiar_pantalla(Pantalla1)
+
+class Pantalla1(JuegoApp):
     '''Pantalla inicial donde comienza la aplicacion'''
     def __init__(self, root: Tk, juego: Juego):
         super().__init__(root, juego)
         
         #Titulo
         self.titulo = Label(self.mainframe, text='Cantidad de Jugadores', **self.estilo_titulo)
-        '''Label del titulo'''
         self.titulo.pack(ipady=70)
         
         #Contenedores de botones
         self.button_container1 = Frame(self.mainframe, background='#032339')
-        '''Contenedor de botones 1'''
         self.button_container1.pack(pady=20)
 
         self.button_container2 = Frame(self.mainframe, background='#032339')
-        '''Contenedor de botones 2'''
         self.button_container2.pack(pady=20)
 
         #Estilo botones
         self.estilo_botones = {'font':'impact 30', 'foreground':'#FF8C00', 'width':8, 'background':'#18435F'}
-        '''Estilo de botones'''
-        
 
         # Definir los botones
         #Boton 1
@@ -193,7 +219,6 @@ class Pantalla2(JuegoApp):
         
         #Defino el titulo
         self.titulo = Label(self.mainframe, text='Que se Apuesta', **self.estilo_titulo)
-        '''Label del titulo'''
         self.titulo.pack(ipady=70)
         
         #Estilo de cajas de texto
@@ -201,7 +226,6 @@ class Pantalla2(JuegoApp):
         
         #Defino la caja de texto
         self.texto_entrada = StringVar()
-        '''Entrada del texto'''
         self.text_area = Entry(self.mainframe, textvariable=self.texto_entrada, **self.estilo_caja_texto)
         self.text_area.pack(pady=100, ipady=5)
         self.text_area.bind('<Enter>', lambda event: self.text_area.config(background='#1C5B83'))
@@ -216,6 +240,7 @@ class Pantalla2(JuegoApp):
             return True        
 
     def obtener_texto(self, event):
+        '''Metodo que obtiene lo escrito en la caja de texto'''
         texto_ingresado = self.texto_entrada.get()
         self.texto_entrada.set("")
         if self.validar_apuesta(texto_ingresado):
@@ -235,11 +260,9 @@ class Pantalla3(JuegoApp):
         super().__init__(root, juego)
                 
         self.titulo = Label(self.mainframe, text='Escribir los nombres de los jugadores', **self.estilo_titulo)
-        '''Label del titulo'''
         self.titulo.pack(ipady=70)
         
         self.contenedor = Frame(self.mainframe, background='#032339')
-        '''Contenedor de botones 1'''
         self.contenedor.pack()
 
         # Estilo de label
@@ -273,17 +296,25 @@ class Pantalla3(JuegoApp):
 
             #Casillas de verificacion
             self.nombre_casilla_verificacion = f'self.casilla_verificacion{jugador +1}'
-            self.nombre_casilla_verificacion = Label(self.contenedor, text='', **self.estilo_labels)
+            self.nombre_casilla_verificacion = Label(self.contenedor, text='❎', **self.estilo_labels)
             self.nombre_casilla_verificacion.grid(column=2, row=jugador, ipady=3, pady=5, padx=15)
             self.lista_casillas_verificacion.append(self.nombre_casilla_verificacion)  
 
         # Defino boton de continuar
         self.boton_continuar = Button(self.contenedor, text='Continuar', command=lambda: self.cambiar_pantalla(Pantalla4), font='impact 30', foreground='#FF8C00', background='#18435F', width=10, state='disabled')
-        self.boton_continuar.grid(row=int((self.juego.get_cantidad_jugadores()-1)/2), column=3, padx=(130, 150))
-        
+        self.boton_continuar.bind('<Enter>', lambda event: self.boton_continuar.config(background='#1C5B83', activeforeground='#D84500', activebackground='#205067'))
+        self.boton_continuar.bind('<Leave>', lambda event: self.boton_continuar.config(background='#18435F'))
+        self.boton_continuar.grid(row=2, column=3, padx=(90, 150))
+
+        #Defino boton de verificacion
+        self.boton_verificar = Button(self.contenedor, text='Verificar', command=lambda: self.obtener_texto(self.nombres_entradas), font='impact 15', foreground='#FF8C00', background='#18435F', width=10)
+        self.boton_verificar.bind('<Enter>', lambda event: self.boton_verificar.config(background='#1C5B83', activeforeground='#D84500', activebackground='#205067'))
+        self.boton_verificar.bind('<Leave>', lambda event: self.boton_verificar.config(background='#18435F'))
+        self.boton_verificar.grid(row=3, column=3, padx=(90, 150), pady=(20,0))
+                
         #Defino label de verificacion
-        self.label_verificacion = Label(self.contenedor, text='\nPulsa ENTER para verificar\n\nLos nombres no pueden estar repetidos o contener numeros', foreground='#FF8C00', background='#032339', font='impact 12')
-        self.label_verificacion.grid(row=int((self.juego.get_cantidad_jugadores()-1)/2)+1, column=3, padx=(130, 150))
+        self.label_verificacion = Label(self.contenedor, text='Pulsa ENTER para verificar\nLos nombres no pueden estar repetidos o contener numeros', foreground='#FF8C00', background='#032339', font='impact 12')
+        self.label_verificacion.grid(row=4, column=3, padx=(90, 150))
 
         self.root.bind('<Return>', lambda event, entry=self.nombres_entradas: self.obtener_texto(entry))
     
@@ -303,15 +334,15 @@ class Pantalla3(JuegoApp):
                 self.lista_casillas_verificacion[pos].config(text='✅')
         self.juego.set_jugadores(nombres)
         self.boton_continuar.configure(state='normal')
+        self.boton_verificar.configure(state='disabled')
+        self.label_verificacion.config(text=f'{' '*35}Pulsa ENTER para Continuar{' '*35}\n')
         self.root.bind('<Return>', lambda event: self.cambiar_pantalla(Pantalla4))
-
         
 class Pantalla4(JuegoApp):
     '''Segunda pantalla de la aplicacion grafica'''
     def __init__(self, root: Tk, juego: Juego):
         super().__init__(root, juego)
-        print('Los jugadores son:', self.juego.get_jugadores())
-        print('Se apuesta: ', self.juego.get_la_apuesta())
+        
 
 if __name__ == "__main__":
     #Defino el root
