@@ -5,37 +5,34 @@ from typing import Type
 class Juego:
     '''Clase contenedora de la logica del juego'''
     def __init__(self):
-        self.__cantidad_jugadores = int()
-        self.__la_apuesta = str()
-        self.nombres_jugadores = []
+        self.__cantidad_jugadores:int = int()
+        self.__la_apuesta:str = str()
+        self.__jugadores:list[str] = []
 
     def set_cantidad_jugadores(self, cantidad):
         '''Metodo que setea la cantidad de jugadores'''
         self.__cantidad_jugadores = cantidad
 
-    def get_cantidad_jugadores(self):
+    def get_cantidad_jugadores(self) -> int:
         '''Metodo que devuelve la cantidad de jugadores'''
         return self.__cantidad_jugadores
-    
-    def validar_apuesta(self, apuesta:str) -> bool:
-        '''Metodo que valida lo ingresado en la apuesta, si la apuesta es valida de vuelve True, de lo contrario False'''
-        if apuesta.isspace() or not apuesta.isprintable or apuesta == '':
-            return False
-        else:
-            return True
     
     def set_la_apuesta(self, apuesta:str) -> None:
         '''Metodo que setea la apuesta'''
         self.__la_apuesta = apuesta
         
     def get_la_apuesta(self):
+        '''Metodo para obtener que es lo que se apuesta'''
         return self.__la_apuesta
 
-    def set_nombre_jugador(self, nombre):
-        self.nombres_jugadores.append(nombre)
 
-    def get_nombres_jugadores(self):
-        return self.nombres_jugadores
+    def set_jugadores(self, jugadores:list[str]) -> None:
+        '''Metodo para setear los nombres de los jugadores'''
+        self.__jugadores = jugadores
+
+    def get_jugadores(self) -> list[str]:
+        '''Metodo para obtener los nombres de los jugadores'''
+        return self.__jugadores
     
 
 class JuegoApp:
@@ -55,7 +52,7 @@ class JuegoApp:
         self.mainframe.grid(column=0, row=0, sticky=(W, N, E, S))
 
         #Boton de cierre
-        self.boton_cierre = Button(root, text='X', font=('Arial', 10, 'bold'), foreground='red', background='#032339', width=3, command=self.cerrar_programa)
+        self.boton_cierre = Button(root, text='❌', font=('Arial', 8, 'bold'), foreground='red', background='#032339', pady=4, width=3, command=self.cerrar_programa)
         '''Boton que cierra el programa'''
         self.boton_cierre.place(relx=1, rely=0, anchor='ne')
         self.boton_cierre.bind('<Enter>', lambda event: self.boton_cierre.config(background='#1C5B83', activeforeground='#D84500', activebackground='#205067'))
@@ -65,9 +62,6 @@ class JuegoApp:
         #Estilo de titulos
         self.estilo_titulo = {'font':'impact 55', 'foreground':'#FF8C00', 'background':'#032339'}
         '''Estilo para los titulos'''
-        
-        #Estilo de cajas de texto
-        self.estilo_caja_texto = {'font':'impact 30', 'foreground':'#FF8C00', 'background':'#18435F', 'width':50, 'border':5, 'insertbackground':'#FF8C00', 'justify':'center'}
 
     def cerrar_programa(self) -> None:
         '''Metodo que permite cerrar el programa destruyendo el root'''
@@ -75,11 +69,23 @@ class JuegoApp:
        
     def desvincular_teclas(self) -> None:  
         '''Metodo para desvincular teclas menos la tecla de escape'''
-        for i in range (6):
-            self.root.unbind(f'<KeyPress-{i+2}>')
-            self.root.unbind(f'<KeyRelease-{i+2}>')
+        for i in range (10):
+            self.root.unbind(f'<KeyPress-{i}>')
+            self.root.unbind(f'<KeyRelease-{i}>')
         self.root.unbind(f'<KeyPress-Return>')
         self.root.unbind(f'<KeyRelease-Return>')
+        self.root.unbind(f'<KeyPress-f>')
+        self.root.unbind(f'<KeyRelease-f>')
+        self.root.unbind(f'<KeyPress-e>')
+        self.root.unbind(f'<KeyRelease-e>')
+        self.root.unbind(f'<KeyPress-p>')
+        self.root.unbind(f'<KeyRelease-p>')
+        self.root.unbind(f'<KeyPress-g>')
+        self.root.unbind(f'<KeyRelease-g>')
+        self.root.unbind(f'<KeyPress-d>')
+        self.root.unbind(f'<KeyRelease-d>')
+        
+        
        
     def eliminar_widgets(self) -> None:
         '''Metodo que destruye los widgets que contiene el mainframe'''  
@@ -190,20 +196,29 @@ class Pantalla2(JuegoApp):
         '''Label del titulo'''
         self.titulo.pack(ipady=70)
         
+        #Estilo de cajas de texto
+        self.estilo_caja_texto = {'font':'impact 30', 'foreground':'#FF8C00', 'background':'#18435F', 'width':50, 'border':5, 'insertbackground':'#FF8C00', 'justify':'center'}
+        
         #Defino la caja de texto
         self.texto_entrada = StringVar()
         '''Entrada del texto'''
         self.text_area = Entry(self.mainframe, textvariable=self.texto_entrada, **self.estilo_caja_texto)
-        self.text_area.pack(pady=100)
+        self.text_area.pack(pady=100, ipady=5)
         self.text_area.bind('<Enter>', lambda event: self.text_area.config(background='#1C5B83'))
         self.text_area.bind('<Leave>', lambda event: self.text_area.config(background='#18435F'))
         self.text_area.bind('<Return>', self.obtener_texto)
-        
+    
+    def validar_apuesta(self, apuesta:str) -> bool:
+        '''Metodo que valida lo ingresado en la apuesta, si la apuesta es valida de vuelve True, de lo contrario False'''
+        if apuesta.isspace() or not apuesta.isprintable or apuesta == '':
+            return False
+        else:
+            return True        
 
     def obtener_texto(self, event):
         texto_ingresado = self.texto_entrada.get()
         self.texto_entrada.set("")
-        if juego.validar_apuesta(texto_ingresado):
+        if self.validar_apuesta(texto_ingresado):
             juego.set_la_apuesta(texto_ingresado)
             self.cambiar_pantalla(Pantalla3)
         else:
@@ -219,7 +234,85 @@ class Pantalla3(JuegoApp):
     def __init__(self, root: Tk, juego: Juego):
         super().__init__(root, juego)
                 
+        self.titulo = Label(self.mainframe, text='Escribir los nombres de los jugadores', **self.estilo_titulo)
+        '''Label del titulo'''
+        self.titulo.pack(ipady=70)
         
+        self.contenedor = Frame(self.mainframe, background='#032339')
+        '''Contenedor de botones 1'''
+        self.contenedor.pack()
+
+        # Estilo de label
+        self.estilo_labels = {'font':'impact 22', 'foreground':'#FF8C00', 'background':'#032339'}
+        
+        # Estilo de cajas de texto
+        self.estilo_caja_texto = {'font':'impact 22', 'foreground':'#FF8C00', 'background':'#18435F', 'width':20, 'border':5, 'insertbackground':'#FF8C00', 'justify':'center'}
+
+        # Lista entradas
+        self.nombres_entradas: list[StringVar] = []
+        
+        # Lista nombres jugadores
+        self.nombres_jugadores: list[str] = []
+        
+        #Lista Casillas de verificacion
+        self.lista_casillas_verificacion:list[Label] = []
+        
+        # Defino labels y entradas de texto
+        for jugador in range(self.juego.get_cantidad_jugadores()):
+            # Labels
+            self.nombre_label = f'self.label{jugador + 1}'
+            self.nombre_label = Label(self.contenedor, text=f'Nombre del Jugador/a  {jugador + 1}', **self.estilo_labels)
+            self.nombre_label.grid(column=0, row=jugador, ipady=3, pady=5, padx=(100,15))        
+            
+            # Entradas de texto
+            nombre_entrada_texto = StringVar()
+            self.nombres_entradas.append(nombre_entrada_texto)
+            nombre_caja_texto = f'self.caja_texto{jugador + 1}'
+            nombre_caja_texto = Entry(self.contenedor, textvariable=nombre_entrada_texto, **self.estilo_caja_texto)
+            nombre_caja_texto.grid(column=1, row=jugador, ipady=3, pady=5, padx=15)
+
+            #Casillas de verificacion
+            self.nombre_casilla_verificacion = f'self.casilla_verificacion{jugador +1}'
+            self.nombre_casilla_verificacion = Label(self.contenedor, text='', **self.estilo_labels)
+            self.nombre_casilla_verificacion.grid(column=2, row=jugador, ipady=3, pady=5, padx=15)
+            self.lista_casillas_verificacion.append(self.nombre_casilla_verificacion)  
+
+        # Defino boton de continuar
+        self.boton_continuar = Button(self.contenedor, text='Continuar', command=lambda: self.cambiar_pantalla(Pantalla4), font='impact 30', foreground='#FF8C00', background='#18435F', width=10, state='disabled')
+        self.boton_continuar.grid(row=int((self.juego.get_cantidad_jugadores()-1)/2), column=3, padx=(130, 150))
+        
+        #Defino label de verificacion
+        self.label_verificacion = Label(self.contenedor, text='\nPulsa ENTER para verificar\n\nLos nombres no pueden estar repetidos o contener numeros', foreground='#FF8C00', background='#032339', font='impact 12')
+        self.label_verificacion.grid(row=int((self.juego.get_cantidad_jugadores()-1)/2)+1, column=3, padx=(130, 150))
+
+        self.root.bind('<Return>', lambda event, entry=self.nombres_entradas: self.obtener_texto(entry))
+    
+    def obtener_texto(self, entries: list[StringVar]):
+        '''Metodo que obtiene los nombres escritos en las cajas de texto'''
+        self.nombres_jugadores = [entry.get().upper() for entry in entries]
+        self.validar_nombres(self.nombres_jugadores)
+        
+    def validar_nombres(self, nombres: list[str]) -> None:
+        '''Metodo que valida los nombres ingresados en las cajas de texto'''
+        for pos, nombre_jugador in enumerate(nombres):
+            if not nombre_jugador.isalpha() or nombres.count(nombre_jugador) > 1:
+                self.nombres_jugadores.clear()
+                self.lista_casillas_verificacion[pos].config(text='❎')
+                return None
+            else:
+                self.lista_casillas_verificacion[pos].config(text='✅')
+        self.juego.set_jugadores(nombres)
+        self.boton_continuar.configure(state='normal')
+        self.root.bind('<Return>', lambda event: self.cambiar_pantalla(Pantalla4))
+
+        
+class Pantalla4(JuegoApp):
+    '''Segunda pantalla de la aplicacion grafica'''
+    def __init__(self, root: Tk, juego: Juego):
+        super().__init__(root, juego)
+        print('Los jugadores son:', self.juego.get_jugadores())
+        print('Se apuesta: ', self.juego.get_la_apuesta())
+
 if __name__ == "__main__":
     #Defino el root
     root = Tk()     
