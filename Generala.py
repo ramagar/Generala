@@ -39,7 +39,7 @@ class Juego:
         return self.__jugadores
     
     def set_puntos_jugador(self, nombre:str, puntos:int = 0) -> None:
-        self.__puntos_jugador[nombre:puntos]
+        self.__puntos_jugador[nombre] = puntos
         
     def get_puntos_jugador(self, nombre:str) -> int:
         return self.__puntos_jugador[nombre]
@@ -49,6 +49,7 @@ class Juego:
         
     def get_ronda(self) -> int:
         return self.__ronda
+    
 
 class JuegoApp:
     '''Clase contenedora de la Interfaz Grafica del juego'''
@@ -98,11 +99,6 @@ class JuegoApp:
         self.desvincular_teclas()
         self.eliminar_widgets()
         nueva_pantalla(self.root, self.juego)
-        
-    def jugar(self) -> None:
-        '''Metodo para mantener activo el juego'''
-        pass
-        #while True:
 
 class PantallaInicial(JuegoApp):
     '''Pantalla inicial donde comienza la aplicacion'''
@@ -130,7 +126,7 @@ class PantallaInicial(JuegoApp):
         '''Metodo que activa la barra de progreso al iniciar el programa'''
         valor_actual = self.barra_progreso['value']
         if valor_actual < 100:
-            self.barra_progreso['value'] += 100
+            self.barra_progreso['value'] += 100 #3.5
             self.root.after(100, self.iniciar_progreso)
         else:
             self.cambiar_pantalla(Pantalla1)
@@ -322,13 +318,22 @@ class Pantalla4(JuegoApp):
         # Estilo para el titulo
         self.estilo_titulo: dict = {'font': 'impact 35', 'foreground': '#FF8C00', 'background': '#032339'}
         
+        #Turno de jugador
+        self.turno = 0
+        
+        #Condicion mostrando
+        self.mostrando = False
+        
+        #Puntos jugadores
+        self.puntos_jugadores = [[0 for _ in range(11)] for _ in range(self.juego.get_cantidad_jugadores())]
+        
         # Crear el titulo
-        self.titulo: Label = Label(self.mainframe, text='Le toca jugar a Jugador', **self.estilo_titulo)
-        self.titulo.pack(pady=0, ipady=0, padx=(270,0))
+        self.titulo: Label = Label(self.mainframe, text=f'Es el turno de {self.juego.get_jugadores()[self.turno]}', **self.estilo_titulo)
+        self.titulo.pack(pady=0, ipady=0, padx=(250,0))
         
         # Crear el marco principal
         self.contenedor_tablero: Frame = Frame(self.mainframe, background='#032339')
-        self.contenedor_tablero.pack(expand=True, fill='both', pady=0, ipady=0)
+        self.contenedor_tablero.pack(expand=True, fill='both', pady=0, ipady=0, padx=(50,0))
 
         # Configuración para que el Frame se expanda
         self.contenedor_tablero.columnconfigure(0, weight=1)
@@ -339,62 +344,59 @@ class Pantalla4(JuegoApp):
         self.canvas.grid(row=0, column=0, sticky='nsew', pady=0)
 
         # Calcula el tamaño de la cuadrícula
-        num_filas: int = 13
-        num_columnas: int = self.juego.get_cantidad_jugadores() + 2
-
+        self.num_filas: int = 13
+        self.num_columnas: int = self.juego.get_cantidad_jugadores() + 2
+        
         # Dibujar líneas horizontales y verticales
-        margen = 50
-        ancho_celda = (810 - 2 * margen) / num_columnas * 1.8
-        alto_celda = (550 - 2 * margen) / num_filas * 1.4
+        self.margen = 50
+        self.ancho_celda = (780 - 2 * self.margen) / self.num_columnas * 1.8
+        self.alto_celda = (550 - 2 * self.margen) / self.num_filas * 1.4
 
+        #Posciones de casilleros con '*'
+        self.pos_casilleros:list[tuple] = []
+        
         # Dibujar líneas horizontales y verticales después de los casilleros
-        for i in range(num_filas + 1):
-            y = i * alto_celda + margen
-            self.canvas.create_line((margen + ancho_celda), y, 700 - margen, y, fill='#FF8C00')  # Líneas horizontales
+        for i in range(self.num_filas + 1):
+            y = i * self.alto_celda + self.margen
+            self.canvas.create_line((self.margen + self.ancho_celda), y, 700 - self.margen, y, fill='#FF8C00')  # Líneas horizontales
 
-        for i in range(1, num_columnas + 1):  # Comenzar desde la columna 1
-            x = i * ancho_celda + margen
-            self.canvas.create_line(x, margen, x, 550 - margen, fill='#FF8C00')  # Líneas verticales
+        for i in range(1, self.num_columnas + 1):  # Comenzar desde la columna 1
+            x = i * self.ancho_celda + self.margen
+            self.canvas.create_line(x, self.margen, x, 550 - self.margen, fill='#FF8C00')  # Líneas verticales
 
-        # Crear los casilleros con texto o botón
-        for row in range(num_filas):
-            for col in range(num_columnas):
-                x1 = col * ancho_celda + margen
-                y1 = row * alto_celda + margen
-                x2 = (col + 1) * ancho_celda + margen
-                y2 = (row + 1) * alto_celda + margen
+        #Numero del boton
+        self.numero_boton = 0
+        
+        # Crear los casilleros con texto
+        for row in range(self.num_filas):
+            for col in range(self.num_columnas):
+                x1 = col * self.ancho_celda + self.margen
+                y1 = row * self.alto_celda + self.margen
+                x2 = (col + 1) * self.ancho_celda + self.margen
+                y2 = (row + 1) * self.alto_celda + self.margen
                 
                 # Determinar el color de fondo según la fila
                 if row == 0: 
-                    background_color = '#663D7A' 
+                    self.background_color = '#663D7A' 
                 elif row <= 6:
-                    background_color = f'#1C{7-row}B83' 
+                    self.background_color = f'#1C{7-row}B83' 
                 elif row > 6 and row <= 11:
-                    background_color = f'#1C5B{11-row}3'
+                    self.background_color = f'#1C5B{11-row}3'
                 else:
-                    background_color = '#BB2020'
+                    self.background_color = '#BB2020'
                 
-                # Agrega el texto o botón
+                # Agrega el texto
                 if row == 0 and col > 1:
                     texto = self.juego.get_jugadores()[col-2]
+                elif col == 0 and row == 0:
+                    pass
                 elif col == 0 and row > 0 and row < 7:
-                    #Modificar para agregar botones segun fila
-                    btn_width = (x2 - x1) / 6  # Ancho para cinco botones
-                    for i in range(5):
-                        btn = Button(self.canvas, text=f'x{i+1}', font='impact 12', background='#18435F', foreground='#FF8C00')
-                        btn.place(x=x1 + (i + 0.5) * btn_width, y=(y1 + y2) / 2, anchor='center')
-                    continue
+                    pass    
                 elif col == 0 and row >= 7 and row != 12:
-                    btn_width = (x2 - x1) / 3
-                    btn = Button(self.canvas, text=f'Servida', font='impact 12', background='#18435F', foreground='#FF8C00')
-                    btn.place(x=x1 + (0 + 0.5) * btn_width, y=(y1 + y2) / 2, anchor='center')
-                    btn2 = Button(self.canvas, text=f'Normal', font='impact 12', background='#18435F', foreground='#FF8C00')
-                    btn2.place(x=x1 + (1 + 1) * btn_width, y=(y1 + y2) / 2, anchor='center')
+                    pass
                 elif col == 0 and row == 12:
-                    btn = Button(self.canvas, text=f'Mostrar', font='impact 12', background='#18435F', foreground='#FF8C00')
-                    btn.place(x=(x1 + x2) / 2.25, y=(y1 + y2) / 2, anchor='center')
-                    continue
-                elif col == 1 and row == 0 or col == 0 and row > 11 or col == 0 and row == 0:
+                    pass
+                elif col == 1 and row == 0 or col == 0 and row > 11:
                     texto = ''
                 elif col == 1 and row >= 1:
                     if row < 7:
@@ -414,16 +416,208 @@ class Pantalla4(JuegoApp):
                 elif row == 12 and col != 0:
                     texto = '***'
                 else:
+                    self.pos_casilleros.append((row, col))
                     texto = '*'
                 
                 x_texto = (x1 + x2) / 2
                 y_texto = (y1 + y2) / 2
 
                 if col != 0:
-                    self.canvas.create_rectangle(x1, y1, x2, y2, fill=background_color)
+                    self.canvas.create_rectangle(x1, y1, x2, y2, fill=self.background_color)
                     self.canvas.create_text(x_texto, y_texto, text=texto, font='impact 15', fill='#FF8C00')
+    
+        self.crear_botones() 
+        
+    def crear_botones(self):
+        for row in range(self.num_filas):
+            for col in range(self.num_columnas):
+                x1 = col * self.ancho_celda + self.margen
+                y1 = row * self.alto_celda + self.margen
+                x2 = (col + 1) * self.ancho_celda + self.margen
+                y2 = (row + 1) * self.alto_celda +  self.margen
+                
+                # Determinar el color de fondo según la fila
+                if row == 0: 
+                    self.background_color = '#663D7A' 
+                elif row <= 6:
+                    self.background_color = f'#1C{7-row}B83' 
+                elif row > 6 and row <= 11:
+                    self.background_color = f'#1C5B{11-row}3'
+                else:
+                    self.background_color = '#BB2020'
 
-        self.jugar()
+                #Agrega los botones
+                if col == 0 and row == 0:
+                    btn_atras = Button(self.canvas, text=f'Atras ⮪', font='impact 12', background='#18435F', foreground='#FF8C00', command=lambda: self.atras())
+                    btn_atras.place(x=(x1 + x2) / 2.25, y=(y1 + y2) / 2, anchor='center')
+                elif col == 0 and row > 0 and row < 7:
+                    btn_width = (x2 - x1) / 6  # Ancho para cinco botones
+                    if self.juego.get_cantidad_jugadores() == 2:
+                        ancho = (x2 - x1) / 9
+                    elif self.juego.get_cantidad_jugadores() < 4:
+                        ancho = (x2 - x1) / 7
+                    else:
+                        ancho = btn_width
+                    nombre_boton = f'btn_borrar{row+1}'
+                    nombre_boton = Button(self.canvas, text='⌫', font='impact 11', background='#18435F', foreground='#FF8C00', command=lambda pos=self.pos_casilleros[self.numero_boton + self.turno], color=self.background_color: self.actualizar_canvas(pos, color))
+                    nombre_boton.place(x=x1 - 1 * ancho, y=(y1 + y2) / 2, anchor='center')
+                    for i in range(6):
+                        nombre_boton = f'btn_x{i+1}_{row}'
+                        nombre_boton = Button(self.canvas, text=f'x{i}', font='impact 11', background='#18435F', foreground='#FF8C00', command=lambda pos=self.pos_casilleros[self.numero_boton + self.turno], color=self.background_color, multiplicador = i: self.actualizar_canvas(pos, color, multiplicador))
+                        nombre_boton.place(x=x1 + i * btn_width, y=(y1 + y2) / 2, anchor='center')
+                    self.numero_boton += self.juego.get_cantidad_jugadores()
+                elif col == 0 and row >= 7 and row != 12:
+                    btn_width = (x2 - x1) / 4
+                    if juego.get_cantidad_jugadores() > 5:
+                        texto1 = 'Ser.'
+                        texto2 = 'Nor.'
+                    else:
+                        texto1 = 'Servida'
+                        texto2 = 'Normal'
+                        
+                    nombre_boton = f'btn_borrar{row+1}'
+                    nombre_boton = Button(self.canvas, text='⌫', font='impact 11', background='#18435F', foreground='#FF8C00', command=lambda pos=self.pos_casilleros[self.numero_boton + self.turno], color=self.background_color: self.actualizar_canvas(pos, color))
+                    nombre_boton.place(x=x1 -0.3 * btn_width, y=(y1 + y2) / 2, anchor='center')
+                    
+                    nombre_servida = f'self.btn_servida{row}'
+                    nombre_servida = Button(self.canvas, text=texto1, font='impact 12', background='#18435F', foreground='#FF8C00', command=lambda pos=self.pos_casilleros[self.numero_boton + self.turno], color=self.background_color, suma = 5: self.actualizar_canvas(pos, color, suma=suma))
+                    nombre_servida.place(x=x1 + 0.75 * btn_width, y=(y1 + y2) / 2, anchor='center')
+                    nombre_cero = f'self.btn_cero{row}'
+                    nombre_cero = Button(self.canvas, text='x0', font='impact 12', background='#18435F', foreground='#FF8C00', command=lambda pos=self.pos_casilleros[self.numero_boton + self.turno], color=self.background_color, multiplicador = 0: self.actualizar_canvas(pos, color, multiplicador))
+                    nombre_cero.place(x=x1 + 1.75 * btn_width, y=(y1 + y2) / 2, anchor='center')
+                    nombre_normal = f'self.btn_normal{row}'
+                    nombre_normal = Button(self.canvas, text=texto2, font='impact 12', background='#18435F', foreground='#FF8C00', command=lambda pos=self.pos_casilleros[self.numero_boton + self.turno], color=self.background_color, suma = 0: self.actualizar_canvas(pos, color, suma=suma))
+                    nombre_normal.place(x=x1 + 2.75 * btn_width, y=(y1 + y2) / 2, anchor='center')
+                    self.numero_boton += self.juego.get_cantidad_jugadores()
+                elif col == 0 and row == 12:
+                    self.btn_mostrar = Button(self.canvas, text=f'Mostrar', font='impact 12', background='#18435F', foreground='#FF8C00', command=lambda:self.mostrar_ocultar_puntos(color=self.background_color))
+                    self.btn_mostrar.place(x=(x1 + x2) / 2.25, y=(y1 + y2) / 2, anchor='center')
+                    self.numero_boton += self.juego.get_cantidad_jugadores()
+        self.numero_boton = 0   
+        
+    def actualizar_canvas(self, pos:tuple, color:str, multiplicador:int=None, suma:int=None) -> None:
+        # Actualizar todos los textos en el canvas según la matriz
+        (row, col) = pos
+        x1 = col * self.ancho_celda + self.margen
+        y1 = row * self.alto_celda + self.margen
+        x2 = (col + 1) * self.ancho_celda + self.margen
+        y2 = (row + 1) * self.alto_celda + self.margen
+
+        x_texto = (x1 + x2) / 2
+        y_texto = (y1 + y2) / 2
+        
+        nombre_jugador:str = self.juego.get_jugadores()[col-2]
+
+        #Defino el texto
+        if row == 1:
+            text = 1
+        elif row == 2:
+            text = 2
+        elif row == 3:
+            text = 3
+        elif row == 4:
+            text = 4
+        elif row == 5:
+            text = 5
+        elif row == 6:
+            text = 6
+        elif row == 7:
+            text = 20
+        elif row == 8:
+            text = 30
+        elif row == 9:
+            text = 40
+        elif row == 10:
+            text = 50
+        elif row == 11:
+            text = 100
+        
+        if multiplicador == None and suma == None:
+            # Borrar el texto anterior
+            self.canvas.create_rectangle(x1, y1, x2, y2, fill=color)
+            # Agregar el nuevo texto
+            self.canvas.create_text(x_texto, y_texto, text='*', font='impact 15', fill='#FF8C00')
+            self.puntos_jugadores[col-2][row-1] = 0
+        
+        elif multiplicador == None:
+            # Borrar el texto anterior
+            self.canvas.create_rectangle(x1, y1, x2, y2, fill=color)
+            # Agregar el nuevo texto
+            self.canvas.create_text(x_texto, y_texto, text=f'{text+suma}', font='impact 15', fill='#FF8C00')
+            self.puntos_jugadores[col-2][row-1] = text+suma
+            self.sumar_puntos(nombre_jugador, sum(self.puntos_jugadores[col-2]))
+            self.jugar()
+        else:
+            # Borrar el texto anterior
+            self.canvas.create_rectangle(x1, y1, x2, y2, fill=color)
+            # Agregar el nuevo texto
+            self.canvas.create_text(x_texto, y_texto, text=f'{text * multiplicador}', font='impact 15', fill='#FF8C00')
+            self.puntos_jugadores[col-2][row-1] = text*multiplicador
+            self.sumar_puntos(nombre_jugador, sum(self.puntos_jugadores[col-2]))
+            self.jugar()
+        if self.mostrando == True:
+            (row, col) = 12, pos[1]
+            x1 = col * self.ancho_celda + self.margen
+            y1 = row * self.alto_celda + self.margen
+            x2 = (col + 1) * self.ancho_celda + self.margen
+            y2 = (row + 1) * self.alto_celda + self.margen
+            x_texto = (x1 + x2) / 2
+            y_texto = (y1 + y2) / 2
+            self.canvas.create_rectangle(x1, y1, x2, y2, fill='#BB2020')
+            self.canvas.create_text(x_texto, y_texto, text=self.juego.get_puntos_jugador(self.juego.get_jugadores()[col-2]), font='impact 15', fill='#FF8C00')
+    
+    def cambiar_turno(self) -> None:
+        if self.turno == self.juego.get_cantidad_jugadores() - 1:
+            self.turno = 0
+        else:     
+            self.turno += 1
+        self.titulo.configure(text=f'Es el turno de {self.juego.get_jugadores()[self.turno]}')
+        
+    def sumar_puntos(self, jugador:str, puntos:int) -> None:
+        self.juego.set_puntos_jugador(jugador, puntos)
+    
+    def atras(self) -> None:
+        if self.turno == 0:
+            self.turno = self.juego.get_cantidad_jugadores() - 1
+        else:
+            self.turno -= 1
+        self.titulo.configure(text=f'Es el turno de {self.juego.get_jugadores()[self.turno]}')
+        self.crear_botones()
+    
+    def mostrar_ocultar_puntos(self, color) -> None:
+        if self.mostrando == False:
+            self.mostrando = True
+            self.btn_mostrar.configure(text='Ocultar')
+            for col in range(2, self.juego.get_cantidad_jugadores()+2):
+                row = 12
+                x1 = col * self.ancho_celda + self.margen
+                y1 = row * self.alto_celda + self.margen
+                x2 = (col + 1) * self.ancho_celda + self.margen
+                y2 = (row + 1) * self.alto_celda + self.margen
+                x_texto = (x1 + x2) / 2
+                y_texto = (y1 + y2) / 2
+                self.canvas.create_rectangle(x1, y1, x2, y2, fill=color)
+                # Agregar el nuevo texto
+                self.canvas.create_text(x_texto, y_texto, text=self.juego.get_puntos_jugador(self.juego.get_jugadores()[col-2]), font='impact 15', fill='#FF8C00')
+        else:
+            self.mostrando = False
+            self.btn_mostrar.configure(text='Mostrar')
+            for col in range(2, self.juego.get_cantidad_jugadores()+2):
+                row = 12
+                x1 = col * self.ancho_celda + self.margen
+                y1 = row * self.alto_celda + self.margen
+                x2 = (col + 1) * self.ancho_celda + self.margen
+                y2 = (row + 1) * self.alto_celda + self.margen
+                x_texto = (x1 + x2) / 2
+                y_texto = (y1 + y2) / 2
+                self.canvas.create_rectangle(x1, y1, x2, y2, fill=color)
+                # Agregar el nuevo texto
+                self.canvas.create_text(x_texto, y_texto, text='***', font='impact 15', fill='#FF8C00')
+    
+    def jugar(self) -> None:
+        self.cambiar_turno()
+        self.crear_botones()
+
 
 if __name__ == "__main__":
     #Defino el root
