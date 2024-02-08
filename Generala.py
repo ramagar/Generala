@@ -427,7 +427,10 @@ class Pantalla4(JuegoApp):
 
                 if col != 0:
                     self.canvas.create_rectangle(x1, y1, x2, y2, fill=self.background_color)
-                    self.canvas.create_text(x_texto, y_texto, text=texto, font='impact 15', fill='#FF8C00')
+                    if col == 2 and row == 0:
+                        self.canvas.create_text(x_texto, y_texto, text=texto, font='impact 15', fill='#13DF10')
+                    else:
+                        self.canvas.create_text(x_texto, y_texto, text=texto, font='impact 15', fill='#FF8C00')
     
         self.crear_botones() 
         
@@ -549,7 +552,7 @@ class Pantalla4(JuegoApp):
             # Agregar el nuevo texto
             self.canvas.create_text(x_texto, y_texto, text='*', font='impact 15', fill='#FF8C00')
             self.puntos_jugadores[col-2][row-1] = 0
-        
+             
         elif multiplicador == None:
             # Borrar el texto anterior
             self.canvas.create_rectangle(x1, y1, x2, y2, fill=color)
@@ -584,38 +587,53 @@ class Pantalla4(JuegoApp):
                 self.canvas.create_text(x_texto, y_texto, text=self.juego.get_puntos_jugador(self.juego.get_jugadores()[col-2]), font='impact 15', fill='#FF8C00')
             except:
                 pass
-        
-        (row, col) = (0, pos[1]+1)
-        if col > self.juego.get_cantidad_jugadores()+1:
-            col = 2
-        x1 = col * self.ancho_celda + self.margen
-        y1 = row * self.alto_celda + self.margen
-        x2 = (col + 1) * self.ancho_celda + self.margen
-        y2 = (row + 1) * self.alto_celda + self.margen
+            
+        if multiplicador == None and suma == None:
+            (row, col) = (0, pos[1])
+            x1 = col * self.ancho_celda + self.margen
+            y1 = row * self.alto_celda + self.margen
+            x2 = (col + 1) * self.ancho_celda + self.margen
+            y2 = (row + 1) * self.alto_celda + self.margen
 
-        x_texto = (x1 + x2) / 2
-        y_texto = (y1 + y2) / 2
-        
-        try:
-            self.canvas.create_rectangle(x1, y1, x2, y2, fill='#663D7A')
-            self.canvas.create_text(x_texto, y_texto, text=self.juego.get_jugadores()[col-2], font='impact 15', fill='#13DF10')
-        except:
-            pass
-        
-        (row, col) = (0, pos[1])
-        x1 = col * self.ancho_celda + self.margen
-        y1 = row * self.alto_celda + self.margen
-        x2 = (col + 1) * self.ancho_celda + self.margen
-        y2 = (row + 1) * self.alto_celda + self.margen
+            x_texto = (x1 + x2) / 2
+            y_texto = (y1 + y2) / 2
+            try:
+                self.canvas.create_rectangle(x1, y1, x2, y2, fill='#663D7A')
+                self.canvas.create_text(x_texto, y_texto, text=self.juego.get_jugadores()[col-2], font='impact 15', fill='#13DF10')
+            except:
+               pass
+        else:
+            (row, col) = (0, pos[1]+1)
+            if col > self.juego.get_cantidad_jugadores()+1:
+                col = 2
+            x1 = col * self.ancho_celda + self.margen
+            y1 = row * self.alto_celda + self.margen
+            x2 = (col + 1) * self.ancho_celda + self.margen
+            y2 = (row + 1) * self.alto_celda + self.margen
 
-        x_texto = (x1 + x2) / 2
-        y_texto = (y1 + y2) / 2
-        
-        try:
-            self.canvas.create_rectangle(x1, y1, x2, y2, fill='#663D7A')
-            self.canvas.create_text(x_texto, y_texto, text=self.juego.get_jugadores()[col-2], font='impact 15', fill='#FF8C00')
-        except:
-            pass
+            x_texto = (x1 + x2) / 2
+            y_texto = (y1 + y2) / 2
+            
+            try:
+                self.canvas.create_rectangle(x1, y1, x2, y2, fill='#663D7A')
+                self.canvas.create_text(x_texto, y_texto, text=self.juego.get_jugadores()[col-2], font='impact 15', fill='#13DF10')
+            except:
+                pass
+            
+            (row, col) = (0, pos[1])
+            x1 = col * self.ancho_celda + self.margen
+            y1 = row * self.alto_celda + self.margen
+            x2 = (col + 1) * self.ancho_celda + self.margen
+            y2 = (row + 1) * self.alto_celda + self.margen
+
+            x_texto = (x1 + x2) / 2
+            y_texto = (y1 + y2) / 2
+            
+            try:
+                self.canvas.create_rectangle(x1, y1, x2, y2, fill='#663D7A')
+                self.canvas.create_text(x_texto, y_texto, text=self.juego.get_jugadores()[col-2], font='impact 15', fill='#FF8C00')
+            except:
+                pass
         
     def cambiar_turno(self) -> None:
         if self.turno == self.juego.get_cantidad_jugadores() - 1:
@@ -632,6 +650,44 @@ class Pantalla4(JuegoApp):
         self.juego.set_puntos_jugador(jugador, puntos)
     
     def atras(self) -> None:
+        if self.turno == 0:
+            turno = self.juego.get_cantidad_jugadores()
+        else:
+            turno = self.turno
+        (row, col) = (0, turno+1)
+        x1 = col * self.ancho_celda + self.margen
+        y1 = row * self.alto_celda + self.margen
+        x2 = (col + 1) * self.ancho_celda + self.margen
+        y2 = (row + 1) * self.alto_celda + self.margen
+
+        x_texto = (x1 + x2) / 2
+        y_texto = (y1 + y2) / 2
+        
+        try:
+            self.canvas.create_rectangle(x1, y1, x2, y2, fill='#663D7A')
+            self.canvas.create_text(x_texto, y_texto, text=self.juego.get_jugadores()[col-2], font='impact 15', fill='#13DF10')
+        except:
+            pass
+        
+        if self.turno == self.juego.get_cantidad_jugadores():
+            turno = 0
+        else:
+            turno = self.turno
+        (row, col) = (0, turno+2)
+        x1 = col * self.ancho_celda + self.margen
+        y1 = row * self.alto_celda + self.margen
+        x2 = (col + 1) * self.ancho_celda + self.margen
+        y2 = (row + 1) * self.alto_celda + self.margen
+
+        x_texto = (x1 + x2) / 2
+        y_texto = (y1 + y2) / 2
+        
+        try:
+            self.canvas.create_rectangle(x1, y1, x2, y2, fill='#663D7A')
+            self.canvas.create_text(x_texto, y_texto, text=self.juego.get_jugadores()[col-2], font='impact 15', fill='#FF8C00')
+        except:
+            pass
+        
         if self.turno == 0:
             self.turno = self.juego.get_cantidad_jugadores() - 1
             self.restar_ronda()
