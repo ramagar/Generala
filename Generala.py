@@ -1,8 +1,35 @@
+from os import chdir, path
+ruta_script = path.dirname(path.abspath(__file__))
+chdir(ruta_script)
+
+#para modificar cosas poner en 100 barraprogreso y en 1 todos los get_ronda(), parar reestablecerlo ponerlo en 11
+#el peki hizo 286 ptos
+
 from tkinter import *
 from tkinter import ttk
 from typing import Type
 from PIL import Image, ImageTk
+import random
+import mysql.connector
+from mysql.connector.cursor import MySQLCursor
+from matplotlib.backend_bases import FigureManagerBase
+import matplotlib.pyplot as plt
+from matplotlib.axes import Axes
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 
+def manejar_conexion(func):
+    '''Funcion para manejar la conexion con la base de datos'''
+    def wrapper(self):
+        config = {'user': 'root', 'password': '', 'host': 'localhost', 'database': 'generala'}
+        conexion = mysql.connector.connect(**config)
+        try:
+            cursor = conexion.cursor()
+            func(self, cursor)
+            conexion.commit()
+        finally:
+            cursor.close()
+            conexion.close()
+    return wrapper
 
 class Juego:
     '''Clase contenedora de la logica del juego'''
@@ -12,7 +39,11 @@ class Juego:
         self.__jugadores:list[str] = []
         self.__puntos_jugador:dict = {}
         self.__ronda:int = 0
-
+        self.__nombre_ganador:str = str()
+        self.__puntos_ganador:int = int()
+        self.__nombre_perdedor:str = str()
+        self.__puntos_perdedor:int = int()
+        
     def set_cantidad_jugadores(self, cantidad):
         '''Metodo que setea la cantidad de jugadores'''
         self.__cantidad_jugadores = cantidad
@@ -32,6 +63,7 @@ class Juego:
     def set_jugadores(self, jugadores:list[str]) -> None:
         '''Metodo para setear los nombres de los jugadores y tambien sus puntos'''
         self.__jugadores = jugadores
+        random.shuffle(self.__jugadores)
         self.__puntos_jugador = (dict(zip(jugadores, [0 for _ in jugadores])))
 
     def get_jugadores(self) -> list[str]:
@@ -44,6 +76,9 @@ class Juego:
     def get_puntos_jugador(self, nombre:str) -> int:
         return self.__puntos_jugador[nombre]
     
+    def get_diccionario_puntos_jugador(self) -> dict:
+        return self.__puntos_jugador
+    
     def set_ronda(self, sumar:bool) -> None:
         if sumar == True:
             self.__ronda = self.__ronda + 1
@@ -53,8 +88,31 @@ class Juego:
     def get_ronda(self) -> int:
         return self.__ronda
     
+    def set_nombre_perdedor(self, perdedor:str) -> None:
+        self.__nombre_perdedor = perdedor
+        
+    def get_nombre_perdedor(self) -> str:
+        return self.__nombre_perdedor
+    
+    def set_puntos_perdedor(self, puntos:int) -> None:
+        self.__puntos_perdedor = puntos
+    
+    def get_puntos_perdedor(self) -> int:
+        return self.__puntos_perdedor
+    
+    def set_nombre_ganador(self, ganador:str) -> None:
+        self.__nombre_ganador = ganador
+        
+    def get_nombre_ganador(self) -> str:
+        return self.__nombre_ganador
+    
+    def set_puntos_ganador(self, puntos:int) -> None:
+        self.__puntos_ganador = puntos
+        
+    def get_puntos_ganador(self) -> int:
+        return self.__puntos_ganador
 
-class JuegoApp:
+class JuegoApp():
     '''Clase contenedora de la Interfaz Grafica del juego'''
     def __init__(self, root: Tk, juego: Juego) -> None:
         #Root
@@ -743,6 +801,9 @@ class Pantalla4(JuegoApp):
             pass
         self.estilo_botones:dict = {'font':'impact 15', 'foreground':'#FF8C00', 'background':'#18435F'}
         self.btn_final:Button = Button(self.mainframe, text='Continuar para ver el Resultado', **self.estilo_botones, command=lambda: self.cambiar_pantalla(Pantalla5))
+        self.btn_final.bind('<Enter>', lambda event, btn=self.btn_final: btn.config(background='#1C5B83', activeforeground='#D84500', activebackground='#205067'))
+        self.btn_final.bind('<Leave>', lambda event, btn=self.btn_final: btn.config(background='#18435F'))
+        self.root.bind('<KeyPress-Return>', lambda event: self.cambiar_pantalla(Pantalla5))
         self.btn_final.pack(pady=10, ipady=5, padx=(250,0))
     
     def jugar(self) -> None:
@@ -756,8 +817,198 @@ class Pantalla5(JuegoApp):
     def __init__(self, root: Tk, juego: Juego) -> None:
         super().__init__(root, juego)
         
+        
+        # Estilo para el titulo
+        self.estilo_titulo: dict = {'font':'impact 40', 'foreground':'#FF8C00', 'background':'#032339'}
+        
+        # Crear el titulo
+        self.titulo: Label = Label(self.mainframe, text=f'El ganador/a es {self.ganador()} con {self.juego.get_puntos_jugador(self.juego.get_nombre_ganador())} puntos\n\n\nEl perdeor/a es {self.perdedor()} con {self.juego.get_puntos_jugador(self.juego.get_nombre_perdedor())} puntos\nTiene que {self.juego.get_la_apuesta()}', **self.estilo_titulo)
+        self.titulo.pack(ipady=150)
+        
+        #Crear boton
+        self.estilo_botones:dict = {'font':'impact 20', 'foreground':'#FF8C00', 'background':'#18435F'}
+        self.btn_final:Button = Button(self.mainframe, text='Continuar para ver el Historial', **self.estilo_botones, command=lambda: self.cambiar_pantalla(Pantalla6))
+        self.btn_final.bind('<Enter>', lambda event, btn=self.btn_final: btn.config(background='#1C5B83', activeforeground='#D84500', activebackground='#205067'))
+        self.btn_final.bind('<Leave>', lambda event, btn=self.btn_final: btn.config(background='#18435F'))
+        self.root.bind('<KeyPress-Return>', lambda event: self.cambiar_pantalla(Pantalla6))
+        self.btn_final.pack(ipady=5)
+        
+        
+    def ganador(self) -> str:
+        puntajes:list[int] = []
+        ganadores:list[str] = []
+        for nombre in self.juego.get_jugadores():
+            puntajes.append(self.juego.get_puntos_jugador(nombre))
+        for nombre in self.juego.get_jugadores():
+            if self.juego.get_puntos_jugador(nombre) == max(puntajes):
+                ganadores.append(nombre)
+        ganador = random.choice(ganadores)
+        self.juego.set_nombre_ganador(ganador)
+        self.juego.set_puntos_ganador(max(puntajes))
+        return ganador 
+    
+    def perdedor(self) -> str:
+        puntajes:list[int] = []
+        perdedores:list[str] = []
+        for nombre in self.juego.get_jugadores():
+            puntajes.append(self.juego.get_puntos_jugador(nombre))
+        for nombre in self.juego.get_jugadores():
+            if self.juego.get_puntos_jugador(nombre) == min(puntajes):
+                perdedores.append(nombre)
+        perdedor = random.choice([perdedor for perdedor in perdedores if perdedor != self.juego.get_nombre_ganador()])
+        self.juego.set_nombre_perdedor(perdedor)
+        self.juego.set_puntos_perdedor(min(puntajes))
+        return perdedor
 
+class Pantalla6(JuegoApp):
+    '''Pantalla inicial donde comienza la aplicacion'''
+    def __init__(self, root: Tk, juego: Juego) -> None:
+        super().__init__(root, juego)
+        #faltaria funcion que guarde los ganadores(historial), funcion que guarde el puntaje minimo y maximo y de quien es(historial)
+        #Falta crear base de datos en mysql
+        self.__crear_bdd()
+        self.__crear_tablas()
+        self.__guardarResultado()
+        self.__mostrarHistorialGrafico()
+    
+    def __crear_bdd(self) -> None:
+        '''Metodo que crea la base de datos si esta no existe'''
+        mydb = mysql.connector.connect(
+        host="localhost",
+        user="root",
+        passwd="")
+        mycursor = mydb.cursor()
+        mycursor.execute("CREATE DATABASE IF NOT EXISTS generala")
+    
+    @manejar_conexion
+    def __crear_tablas(self, cursor:MySQLCursor) -> None:
+        '''Metodo que crea tablas dentro de la base de datos si estas no existen'''
+        cursor.execute('CREATE TABLE IF NOT EXISTS apuestas (perdedor VARCHAR(30), apuesta VARCHAR(100))')
+        cursor.execute('CREATE TABLE IF NOT EXISTS partidasjugadas (nombre VARCHAR(30), cantidad INT)')
+        cursor.execute('CREATE TABLE IF NOT EXISTS recordganador (nombre VARCHAR(30), puntos INT)')
+        cursor.execute('CREATE TABLE IF NOT EXISTS recordperdedor (nombre VARCHAR(30), puntos INT)')
+    
+    @manejar_conexion
+    def __guardarResultado(self, cursor:MySQLCursor) -> None:
+        '''Método que guarda los resultados en una base de datos'''
+        consulta_guardar = f'''
+        INSERT INTO apuestas (Perdedor, Apuesta) 
+        VALUES ('{self.juego.get_nombre_perdedor()}', '{self.juego.get_la_apuesta()}');
+        '''
+        cursor.execute(consulta_guardar)
+        
+        for jugador in self.juego.get_jugadores():
+            consulta_actualizar = f'''
+            UPDATE partidasjugadas
+            SET cantidad = cantidad + 1
+            WHERE nombre = '{jugador}';
+            '''
+            cursor.execute(consulta_actualizar)
+            
+            if cursor.rowcount == 0:
+                consulta_insertar = f'''
+                INSERT INTO partidasjugadas (nombre, cantidad)
+                VALUES ('{jugador}', 1);
+                '''
+                cursor.execute(consulta_insertar)
+        
+        # Verifica y actualiza la tabla de puntuaciones si el puntaje actual es mayor
+        consulta_puntaje_ganador = f'''
+        SELECT puntos
+        FROM recordganador
+        '''
+        cursor.execute(consulta_puntaje_ganador)
+        resultado_puntaje = cursor.fetchone()
 
+        if resultado_puntaje is None or self.juego.get_puntos_ganador() > resultado_puntaje[0]:
+            # Si no hay registro o el nuevo puntaje es mayor, elimina el registro existente y luego inserta el nuevo
+            consulta_eliminar = f'''
+            DELETE FROM recordganador
+            LIMIT 1;
+            '''
+            cursor.execute(consulta_eliminar)
+
+            # Inserta el nuevo registro
+            consulta_insertar_puntaje = f'''
+            INSERT INTO recordganador (nombre, puntos)
+            VALUES ('{self.juego.get_nombre_ganador()}', {self.juego.get_puntos_ganador()});
+            '''
+            cursor.execute(consulta_insertar_puntaje)
+            
+        # Verifica y actualiza la tabla de puntuaciones si el puntaje actual es mayor
+        consulta_puntaje_perdedor = f'''
+        SELECT puntos
+        FROM recordperdedor
+        '''
+        cursor.execute(consulta_puntaje_perdedor)
+        resultado_puntaje = cursor.fetchone()
+
+        if resultado_puntaje is None or self.juego.get_puntos_perdedor() < resultado_puntaje[0]:
+            # Si no hay registro o el nuevo puntaje es mayor, elimina el registro existente y luego inserta el nuevo
+            consulta_eliminar = f'''
+            DELETE FROM recordperdedor
+            LIMIT 1;
+            '''
+            cursor.execute(consulta_eliminar)
+
+            # Inserta el nuevo registro
+            consulta_insertar_puntaje = f'''
+            INSERT INTO recordperdedor (nombre, puntos)
+            VALUES ('{self.juego.get_nombre_perdedor()}', {self.juego.get_puntos_perdedor()});
+            '''
+            cursor.execute(consulta_insertar_puntaje)
+        
+        
+    @manejar_conexion
+    def __mostrarHistorialGrafico(self, cursor:MySQLCursor) -> None:
+        '''Método que muestra el historial de derrotas con un gráfico de torta'''
+        consulta = """
+        SELECT p.perdedor, COUNT(*) AS perdidas, o.cantidad
+        FROM apuestas AS p
+        LEFT JOIN partidasjugadas AS o 
+        ON p.perdedor = o.nombre
+        GROUP BY p.perdedor, o.cantidad;
+        """
+        cursor.execute(consulta)
+        resultados = cursor.fetchall()
+
+        # Crea un nuevo gráfico
+        fig, ax = plt.subplots(figsize=(9.5, 9.5))
+        ax:Axes
+        ax.pie([resultado[1] for resultado in resultados], labels=[f"{nombre} ({int((perdidas*100)/cantidad)}%)\n{perdidas} derrotas" for nombre, perdidas, cantidad in resultados], startangle=140, textprops=dict(color='#FF8C00'))
+        ax.set_title(f'Historial de derrotas (porcentaje de derrotas %): {sum([perdidas[1] for perdidas in resultados])} partidas jugadas', color='#FF8C00')
+        ax.set_facecolor('#032339')
+
+        # Guarda el gráfico como una imagen
+        plt.savefig("historial.png", facecolor='#032339')
+        # Cierra la figura de Matplotlib para liberar recursos
+        plt.close()
+        imagen = ImageTk.PhotoImage(Image.open('historial.png'))
+        label = Label(self.mainframe, image=imagen, background='#032339')
+        # Obtiene las dimensiones de la ventana principal
+        ancho_ventana = self.root.winfo_reqwidth()
+        alto_ventana = self.root.winfo_reqheight()
+        # Obtiene las dimensiones de la imagen
+        ancho_imagen = imagen.width()
+        alto_imagen = imagen.height()
+        # Calcula las coordenadas para centrar la imagen
+        x = (ancho_ventana - ancho_imagen) // 2.8
+        y = (alto_ventana - alto_imagen) // 4
+        label.place(x=x, y=y)
+        self.imagen_referencia = imagen
+            
+    @manejar_conexion
+    def __mostrarHistorialEscrito(self, cursor:MySQLCursor) -> None:
+        '''Método que muestra el historial de derrotas con todas las apuestas por escrito'''
+        consulta = "SELECT * FROM puntajes;"
+        cursor.execute(consulta)
+        resultados = cursor.fetchall()
+        for nombre, apuesta in resultados:
+            #print(f"{nombre.capitalize()} ==> {apuesta}\n")
+            pass
+        
+    
+        
 if __name__ == "__main__":
     #Defino el root
     root = Tk()     
