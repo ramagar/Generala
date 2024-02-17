@@ -2,7 +2,7 @@ from os import chdir, path
 ruta_script = path.dirname(path.abspath(__file__))
 chdir(ruta_script)
 
-#para modificar cosas poner en 100 barraprogreso y en 1 todos los get_ronda(), parar reestablecerlo ponerlo en 11
+#para modificar cosas poner en 100 barraprogreso y en 1 todos los get_ronda(), parar reestablecerlo ponerlo en 11 (son 3)
 #el peki hizo 286 ptos
 
 from tkinter import *
@@ -16,6 +16,7 @@ from matplotlib.backend_bases import FigureManagerBase
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
+import os
 
 def manejar_conexion(func):
     '''Funcion para manejar la conexion con la base de datos'''
@@ -165,16 +166,30 @@ class PantallaInicial(JuegoApp):
     '''Pantalla inicial donde comienza la aplicacion'''
     def __init__(self, root: Tk, juego: Juego):
         super().__init__(root, juego)
-        #Imagen para la presentacion
-        imagen = ImageTk.PhotoImage(Image.open('logo.png'))
-        label = Label(self.mainframe, image=imagen, background='#032339')
+        self.mainframe.configure(background='#dddfbe')
+        self.boton_cierre.destroy()
+        # Ruta de la imagen
+        ruta_imagen = 'logo.jpg'
+
+        # Carga la imagen y ajusta su tamaño
+        imagen_original = Image.open(ruta_imagen)
+        nuevo_tamano = (1200, 700)  # Establece el nuevo tamaño deseado
+        imagen_redimensionada = imagen_original.resize(nuevo_tamano)
+
+        # Convierte la imagen redimensionada a ImageTk.PhotoImage
+        imagen = ImageTk.PhotoImage(imagen_redimensionada)
+
+        # Crea una etiqueta para mostrar la imagen
+        label = Label(self.mainframe, image=imagen, background='#dddfbe')
         label.pack()
+
+        # Guarda la referencia a la imagen para evitar que sea eliminada por el recolector de basura
         self.imagen_referencia = imagen
 
         #Estilo Barra de Progreso
         self.estilo_barra_progreso = ttk.Style()
         self.estilo_barra_progreso.theme_use("classic")
-        self.estilo_barra_progreso.configure("TProgressbar", troughcolor='#1C5B83', thickness=20, background='#FF8C00')
+        self.estilo_barra_progreso.configure("TProgressbar", troughcolor='#B3B4A5', thickness=20, background='#FF8C00')
         
         #Defino la barra de Progreso
         self.barra_progreso = ttk.Progressbar(self.mainframe, orient='horizontal', length=500, mode='determinate', style="Horizontal.TProgressbar")
@@ -187,7 +202,7 @@ class PantallaInicial(JuegoApp):
         '''Metodo que activa la barra de progreso al iniciar el programa'''
         valor_actual = self.barra_progreso['value']
         if valor_actual < 100:
-            self.barra_progreso['value'] += 100 #3.5
+            self.barra_progreso['value'] += 2 #2
             self.root.after(100, self.iniciar_progreso)
         else:
             self.cambiar_pantalla(Pantalla1)
@@ -617,7 +632,7 @@ class Pantalla4(JuegoApp):
             # Agregar el nuevo texto
             self.canvas.create_text(x_texto, y_texto, text=f'{text+suma}', font='impact 15', fill='#FF8C00')
             self.puntos_jugadores[col-2][row-1] = text+suma
-            if self.juego.get_ronda() < 1: 
+            if self.juego.get_ronda() < 11: 
                 self.sumar_puntos(nombre_jugador, sum(self.puntos_jugadores[col-2]))
             else:
                 if col == self.juego.get_cantidad_jugadores():
@@ -629,7 +644,7 @@ class Pantalla4(JuegoApp):
             # Agregar el nuevo texto
             self.canvas.create_text(x_texto, y_texto, text=f'{text * multiplicador}', font='impact 15', fill='#FF8C00')
             self.puntos_jugadores[col-2][row-1] = text*multiplicador
-            if self.juego.get_ronda() < 1:    
+            if self.juego.get_ronda() < 11:    
                 self.sumar_puntos(nombre_jugador, sum(self.puntos_jugadores[col-2]))
             self.jugar()
         if self.mostrando == True:
@@ -809,7 +824,7 @@ class Pantalla4(JuegoApp):
     def jugar(self) -> None:
         self.cambiar_turno()
         self.crear_botones()
-        if self.juego.get_ronda() == 1:
+        if self.juego.get_ronda() == 11:
             self.boton_final()
         
 class Pantalla5(JuegoApp):
@@ -864,8 +879,7 @@ class Pantalla6(JuegoApp):
     '''Pantalla inicial donde comienza la aplicacion'''
     def __init__(self, root: Tk, juego: Juego) -> None:
         super().__init__(root, juego)
-        #faltaria funcion que guarde los ganadores(historial), funcion que guarde el puntaje minimo y maximo y de quien es(historial)
-        #Falta crear base de datos en mysql
+        #faltaria funcion que guarde los ganadores(historial)
         self.__crear_bdd()
         self.__crear_tablas()
         self.__guardarResultado()
@@ -883,14 +897,40 @@ class Pantalla6(JuegoApp):
     @manejar_conexion
     def __crear_tablas(self, cursor:MySQLCursor) -> None:
         '''Metodo que crea tablas dentro de la base de datos si estas no existen'''
-        cursor.execute('CREATE TABLE IF NOT EXISTS apuestas (perdedor VARCHAR(30), apuesta VARCHAR(100))')
-        cursor.execute('CREATE TABLE IF NOT EXISTS partidasjugadas (nombre VARCHAR(30), cantidad INT)')
-        cursor.execute('CREATE TABLE IF NOT EXISTS recordganador (nombre VARCHAR(30), puntos INT)')
-        cursor.execute('CREATE TABLE IF NOT EXISTS recordperdedor (nombre VARCHAR(30), puntos INT)')
+        cursor.execute('CREATE TABLE IF NOT EXISTS apuestas (perdedor VARCHAR(30) NOT NULL, apuesta VARCHAR(100) NOT NULL)')
+        cursor.execute('CREATE TABLE IF NOT EXISTS partidasjugadas (nombre VARCHAR(30) NOT NULL, cantidad INT NOT NULL)')
+        cursor.execute('CREATE TABLE IF NOT EXISTS recordganador (nombre VARCHAR(30) NOT NULL, puntos INT NOT NULL)')
+        cursor.execute('CREATE TABLE IF NOT EXISTS recordperdedor (nombre VARCHAR(30) NOT NULL, puntos INT NOT NULL)')
+        cursor.execute("CREATE TABLE IF NOT EXISTS resultados (nombre VARCHAR(30) NOT NULL, resultado VARCHAR(20) CHECK (resultado IN ('ganador', 'neutral', 'perdedor')))")
     
     @manejar_conexion
     def __guardarResultado(self, cursor:MySQLCursor) -> None:
         '''Método que guarda los resultados en una base de datos'''
+        jugadores = self.juego.get_jugadores().copy()
+        pos = 0
+        for numero_consulta in range(self.juego.get_cantidad_jugadores()):
+            if numero_consulta == 0:
+                jugadores.remove(self.juego.get_nombre_ganador())
+                consulta = f'''
+                INSERT INTO resultados (nombre, resultado)
+                VALUES ('{self.juego.get_nombre_ganador()}', 'ganador')
+                '''
+                cursor.execute(consulta)
+            elif numero_consulta == 1:
+                jugadores.remove(self.juego.get_nombre_perdedor())
+                consulta = f'''
+                INSERT INTO resultados (nombre, resultado)
+                VALUES ('{self.juego.get_nombre_perdedor()}', 'perdedor')
+                '''
+                cursor.execute(consulta)
+            else:
+                consulta = f'''
+                INSERT INTO resultados (nombre, resultado)
+                VALUES ('{jugadores[pos]}', 'neutral')
+                '''
+                cursor.execute(consulta)
+                pos +=1
+        
         consulta_guardar = f'''
         INSERT INTO apuestas (Perdedor, Apuesta) 
         VALUES ('{self.juego.get_nombre_perdedor()}', '{self.juego.get_la_apuesta()}');
@@ -962,6 +1002,9 @@ class Pantalla6(JuegoApp):
     @manejar_conexion
     def __mostrarHistorialGrafico(self, cursor:MySQLCursor) -> None:
         '''Método que muestra el historial de derrotas con un gráfico de torta'''
+        directorio_imagenes = 'historiales'
+        os.makedirs(directorio_imagenes, exist_ok=True)
+        
         consulta = """
         SELECT p.perdedor, COUNT(*) AS perdidas, o.cantidad
         FROM apuestas AS p
@@ -975,15 +1018,16 @@ class Pantalla6(JuegoApp):
         # Crea un nuevo gráfico
         fig, ax = plt.subplots(figsize=(9.5, 9.5))
         ax:Axes
-        ax.pie([resultado[1] for resultado in resultados], labels=[f"{nombre} ({int((perdidas*100)/cantidad)}%)\n{perdidas} derrotas" for nombre, perdidas, cantidad in resultados], startangle=140, textprops=dict(color='#FF8C00'))
-        ax.set_title(f'Historial de derrotas (porcentaje de derrotas %): {sum([perdidas[1] for perdidas in resultados])} partidas jugadas', color='#FF8C00')
+        ax.pie([resultado[1] for resultado in resultados], labels=[f"{nombre} ({int((perdidas*100)/cantidad)}%)\n{perdidas} derrotas de {cantidad}" for nombre, perdidas, cantidad in resultados], startangle=140, textprops=dict(color='#FF8C00'))
+        ax.set_title(f'Historial general de derrotas (porcentaje de derrotas %): {sum([perdidas[1] for perdidas in resultados])} partidas jugadas en total', color='#FF8C00')
         ax.set_facecolor('#032339')
 
         # Guarda el gráfico como una imagen
-        plt.savefig("historial.png", facecolor='#032339')
+        ruta_imagen = f'historiales/historial_general.png'
+        plt.savefig(ruta_imagen, facecolor='#032339')
         # Cierra la figura de Matplotlib para liberar recursos
         plt.close()
-        imagen = ImageTk.PhotoImage(Image.open('historial.png'))
+        imagen = ImageTk.PhotoImage(Image.open(ruta_imagen))
         label = Label(self.mainframe, image=imagen, background='#032339')
         # Obtiene las dimensiones de la ventana principal
         ancho_ventana = self.root.winfo_reqwidth()
@@ -996,6 +1040,28 @@ class Pantalla6(JuegoApp):
         y = (alto_ventana - alto_imagen) // 4
         label.place(x=x, y=y)
         self.imagen_referencia = imagen
+    
+        ##
+        consulta_cantidad_partidas = '''
+        SELECT COUNT(*) FROM partidasjugadas;
+        '''
+        cursor.execute(consulta_cantidad_partidas)
+        cantidad_partidas = cursor.fetchone()[0]
+        
+        # for partida in range(cantidad_partidas):
+        #     # Crea un nuevo gráfico
+        #     fig, ax = plt.subplots(figsize=(9.5, 9.5))
+        #     ax:Axes
+        #     ax.pie([resultado[1] for resultado in resultados], labels=[f"{nombre} ({int((perdidas*100)/cantidad)}%)\n{perdidas} derrotas de {cantidad}" for nombre, perdidas, cantidad in resultados], startangle=140, textprops=dict(color='#FF8C00'))
+        #     ax.set_title(f'Historial de derrotas (porcentaje de derrotas %): {sum([perdidas[1] for perdidas in resultados])} partidas jugadas en total', color='#FF8C00')
+        #     ax.set_facecolor('#032339')
+
+        #     # Guarda el gráfico como una imagen
+        #     ruta_imagen = f'historiales/historial_general.png'
+        #     plt.savefig(ruta_imagen, facecolor='#032339')
+        #     # Cierra la figura de Matplotlib para liberar recursos
+        #     plt.close()
+            
             
     @manejar_conexion
     def __mostrarHistorialEscrito(self, cursor:MySQLCursor) -> None:
